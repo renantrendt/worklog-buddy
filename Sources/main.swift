@@ -220,7 +220,7 @@ final class BuddyController {
         guard let win = window, let v = view else { return }
         v.mood = Mood.happy
         v.needsDisplay = true
-        if Settings.shared.sound { NSSound(named: "Tink")?.play() }
+        if Settings.shared.sound { NSSound(named: "Pop")?.play() }
         // brief happy beat, then poof + fade
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
             v.mood = Mood.poof
