@@ -407,11 +407,12 @@ final class AppState {
     static var shared: AppDelegate?
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let buddy = BuddyController()
     private let prefs = PreferencesController()
     private var ticker: Timer?
+    private var menuTimer: Timer?
     private var nextNudge = Date().addingTimeInterval(3)   // first appearance ~3s after launch
     private var pausedUntil: Date?
     private var statusLine: NSMenuItem!
@@ -448,7 +449,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Preferences…", action: #selector(openPrefs), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
         for item in menu.items where item.action != nil { item.target = self }
+        menu.delegate = self
         statusItem.menu = menu
+    }
+
+    // Live-refresh the countdown once per second while the menu is open.
+    func menuWillOpen(_ menu: NSMenu) {
+        updateStatus()
+        let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.updateStatus() }
+        RunLoop.main.add(t, forMode: .common)   // .common so it fires during menu tracking
+        menuTimer = t
+    }
+    func menuDidClose(_ menu: NSMenu) {
+        menuTimer?.invalidate()
+        menuTimer = nil
     }
 
     func rescheduleFromNow() {
@@ -467,17 +481,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateStatus()
     }
 
+    private func clock(_ seconds: TimeInterval) -> String {
+        let s = max(0, Int(seconds.rounded()))
+        if s >= 3600 { return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60) }
+        return String(format: "%d:%02d", s / 60, s % 60)
+    }
+
+    // The next moment the active window opens, scanning up to a week ahead.
+    private func nextActiveStart(after date: Date) -> Date {
+        let cal = Calendar.current
+        let s = Settings.shared
+        for offset in 0...8 {
+            guard let day = cal.date(byAdding: .day, value: offset, to: date), s.isActiveDay(day) else { continue }
+            let start = cal.startOfDay(for: day).addingTimeInterval(TimeInterval(s.startMin * 60))
+            if start >= date { return start }
+        }
+        return date
+    }
+
     private func updateStatus() {
         if let until = pausedUntil {
-            let mins = max(0, Int(until.timeIntervalSinceNow / 60))
-            statusLine.title = "Paused (\(mins) min left)"
+            statusLine.title = "⏸ Paused — \(clock(until.timeIntervalSinceNow)) left"
         } else if !Settings.shared.isActiveNow() {
-            statusLine.title = "Outside active hours"
+            let when = nextActiveStart(after: Date())
+            statusLine.title = "Sleeping — wakes in \(clock(when.timeIntervalSinceNow))"
         } else if buddy.isVisible {
-            statusLine.title = "Waiting for your click…"
+            statusLine.title = "Buddy is on screen — click it!"
         } else {
-            let mins = max(0, Int(ceil(nextNudge.timeIntervalSinceNow / 60)))
-            statusLine.title = mins <= 0 ? "Nudging soon…" : "Next nudge in \(mins) min"
+            let remaining = nextNudge.timeIntervalSinceNow
+            statusLine.title = remaining <= 0 ? "Nudging now…" : "Next buddy in \(clock(remaining))"
         }
     }
 
