@@ -1,0 +1,5 @@
+# Build artifact (produced by ./build.sh)
+WorklogBuddy.app/
+
+# macOS
+.DS_Store

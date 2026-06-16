@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worklog Buddy — Expressions</title>
+<meta name="description" content="The pixel moods of Worklog Buddy, a tiny macOS menu-bar reminder to log your working hours.">
+<style>
+  :root{
+    --bg:#1c1a18; --panel:#26221f; --line:#3a342f;
+    --text:#f2e9e1; --muted:#b6a99d; --accent:#c8794f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:56px 20px 80px}
+  header{text-align:center; margin-bottom:48px}
+  header canvas{image-rendering:pixelated; width:120px; height:90px}
+  h1{font-size:30px; font-weight:600; margin:14px 0 6px; letter-spacing:-0.5px}
+  .tag{color:var(--muted); font-size:16px; margin:0}
+  .repo{display:inline-block; margin-top:18px; color:var(--accent); text-decoration:none;
+    border:1px solid var(--line); padding:8px 16px; border-radius:10px; font-size:14px}
+  .repo:hover{background:var(--panel)}
+  h2{font-size:14px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted);
+    font-weight:600; margin:44px 0 18px; border-bottom:1px solid var(--line); padding-bottom:10px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px 10px 14px; text-align:center}
+  .card canvas{image-rendering:pixelated; width:96px; height:72px}
+  .name{font-size:15px; font-weight:600; margin:10px 0 2px}
+  .sub{font-size:13px; color:var(--muted)}
+  footer{text-align:center; color:var(--muted); font-size:13px; margin-top:56px}
+  footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <canvas data-mood="wink"></canvas>
+    <h1>Worklog Buddy</h1>
+    <p class="tag">A tiny macOS menu-bar buddy that nudges you to log your working hours.</p>
+    <a class="repo" href="https://github.com/renantrendt/worklog-buddy">View on GitHub →</a>
+  </header>
+
+  <h2>Core states</h2>
+  <div class="grid" id="core"></div>
+
+  <h2>Expressions</h2>
+  <div class="grid" id="expr"></div>
+
+  <footer>
+    Built with Swift &amp; AppKit · pixels rendered live on this page ·
+    <a href="https://github.com/renantrendt/worklog-buddy">source</a>
+  </footer>
+</div>
+
+<script>
+const C={b:'#c8794f',d:'#3a241a',c:'#e8a487',r:'#e0544e',y:'#efab2e',k:'#1f1d1b',w:'#fbf7ef',l:'#4f9fe6'};
+const TOP0="...bb..bb...",TOP1="..bbbbbbbb..",TOP2=".bbbbbbbbbb.",BOT7=".bbbbbbbbbb.",FEET="..bb....bb..",BODY="bbbbbbbbbbbb";
+const MAPS={
+  idle:[TOP0,TOP1,TOP2,"bbddbbbbddbb","bbddbbbbddbb",BODY,".bddddddddb.",BOT7,FEET],
+  happy:[TOP0,TOP1,TOP2,"bbddbbbbddbb",BODY,"bcbbbbbbbbcb","bbbbddddbbbb",".bbbddddbbb.",FEET],
+  snoozed:[TOP0,TOP1,TOP2,BODY,"bbddbbbbddbb",BODY,".bbbddddbb..",BOT7,FEET],
+  poof:["...b....b...",".b...bb...b.","...bb..bb...",".b.bb..bb.b.","..b.bbbb.b..",".b..bbbb..b.","...b....b...",".b........b.","....b..b...."],
+  wink:[TOP0,TOP1,TOP2,"bbddbbbbbbbb","bbddbbbbddbb",BODY,"..bddddddb..",BOT7,FEET],
+  surprised:[TOP0,TOP1,TOP2,"bbdwbbbbwdbb","bbddbbbbddbb",BODY,".....dd.....",BOT7,FEET],
+  grumpy:[TOP0,TOP1,".bbdbbbbdbb.","bbddbbbbddbb","bbddbbbbddbb",BODY,"...dddddd...",BOT7,FEET],
+  love:["r..bb..bb..r",TOP1,TOP2,"bbrrbbbbrrbb","bbrrbbbbrrbb","bcbbbbbbbbcb","..bddddddb..",BOT7,FEET],
+  cool:[TOP0,TOP1,TOP2,"bbkkbkkbkkbb","bbkkbbbbkkbb",BODY,"..bdddddddb.",BOT7,FEET],
+  sleepy:[TOP0,TOP1,TOP2,BODY,"bbddbbbbddbb","...dddddd...","..dwwwwwwd..",BOT7,FEET],
+  stareyed:["y..bb..bb..y",TOP1,TOP2,"bbyybbbbyybb","bbyybbbbyybb",BODY,".bdwwwwwwdb.",BOT7,FEET],
+  teary:[TOP0,TOP1,TOP2,"bbddbbbbddbb","bbddbbbbddbb","bblbbbbbbbbb","..lddddddb..",BOT7,FEET]
+};
+function draw(canvas,map,scale){
+  const cols=map[0].length, rows=map.length;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=cols*scale*dpr; canvas.height=rows*scale*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.imageSmoothingEnabled=false;
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+    const col=C[map[y][x]]; if(!col)continue;
+    ctx.fillStyle=col; ctx.fillRect(x*scale,y*scale,scale,scale);
+  }
+}
+document.querySelectorAll('header canvas').forEach(cv=>draw(cv,MAPS[cv.dataset.mood],10));
+const core=[['idle','Idle','waiting for a click'],['happy','Happy','you clicked it'],['snoozed','Snoozed','sleeping it off'],['poof','Poof','fading away']];
+const expr=[['wink','Wink','got it, see you soon'],['surprised','Surprised','just popped in'],['grumpy','Grumpy','you’ve ignored me'],['love','Love','thanks for logging'],['cool','Cool','you’re in the zone'],['sleepy','Sleepy','end of the day'],['stareyed','Star-eyed','logging streak!'],['teary','Teary','you forgot me']];
+function build(id,list){
+  const root=document.getElementById(id);
+  list.forEach(([mood,name,sub])=>{
+    const card=document.createElement('div'); card.className='card';
+    const cv=document.createElement('canvas'); draw(cv,MAPS[mood],8);
+    const n=document.createElement('div'); n.className='name'; n.textContent=name;
+    const s=document.createElement('div'); s.className='sub'; s.textContent=sub;
+    card.append(cv,n,s); root.appendChild(card);
+  });
+}
+build('core',core); build('expr',expr);
+</script>
+</body>
+</html>
