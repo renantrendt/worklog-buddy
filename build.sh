@@ -10,7 +10,7 @@ mkdir -p "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/Resources"
 
 echo "Compiling…"
-swiftc -swift-version 5 -O Sources/main.swift -o "$APP/Contents/MacOS/$BIN" -framework AppKit
+swiftc -swift-version 5 -O Sources/main.swift -o "$APP/Contents/MacOS/$BIN" -framework AppKit -framework ServiceManagement
 
 cp Info.plist "$APP/Contents/Info.plist"
 
