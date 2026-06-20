@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 // MARK: - Pixel art
 
@@ -416,6 +417,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var nextNudge = Date().addingTimeInterval(3)   // first appearance ~3s after launch
     private var pausedUntil: Date?
     private var statusLine: NSMenuItem!
+    private var launchItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ note: Notification) {
         AppState.shared = self
@@ -424,7 +426,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let img = buddyImage(size: 18)
             img.isTemplate = false
             btn.image = img
-            btn.imagePosition = .imageOnly
+            btn.imagePosition = .imageLeft
         }
         buildMenu()
         buddy.onDismiss = { [weak self] in self?.rescheduleFromNow() }
@@ -447,6 +449,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: "Pause for today", action: #selector(pauseToday), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Preferences…", action: #selector(openPrefs), keyEquivalent: ","))
+        launchItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+        launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(launchItem)
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
         for item in menu.items where item.action != nil { item.target = self }
         menu.delegate = self
@@ -500,6 +505,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateStatus() {
+        var buttonTitle = ""
         if let until = pausedUntil {
             statusLine.title = "⏸ Paused — \(clock(until.timeIntervalSinceNow)) left"
         } else if !Settings.shared.isActiveNow() {
@@ -510,7 +516,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             let remaining = nextNudge.timeIntervalSinceNow
             statusLine.title = remaining <= 0 ? "Nudging now…" : "Next buddy in \(clock(remaining))"
+            if remaining > 0 { buttonTitle = "\(max(0, Int(remaining / 60)))" }
         }
+        statusItem.button?.title = buttonTitle
     }
 
     @objc private func showNow() { buddy.show() }
@@ -526,6 +534,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateStatus()
     }
     @objc private func openPrefs() { prefs.show() }
+    @objc private func toggleLaunchAtLogin() {
+        let svc = SMAppService.mainApp
+        do {
+            if svc.status == .enabled { try svc.unregister() } else { try svc.register() }
+        } catch {}
+        launchItem.state = svc.status == .enabled ? .on : .off
+    }
     @objc private func quit() { NSApp.terminate(nil) }
 }
 
